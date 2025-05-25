@@ -9,8 +9,11 @@ import { Loader2, Cloud, Thermometer, Wind, Mail, MapPin, User } from "lucide-re
 import { validateEmail } from "@/utils/validation";
 import { getWeatherData, WeatherData } from "@/utils/weatherApi";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const WeatherForm = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -64,6 +67,15 @@ const WeatherForm = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to submit a weather request.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -73,13 +85,29 @@ const WeatherForm = () => {
       const weather = await getWeatherData(formData.city);
       setWeatherData(weather);
       
-      // Simulate storing in database
-      const userData = {
-        ...formData,
-        weather,
-        timestamp: new Date().toISOString()
-      };
-      console.log("Data stored to database:", userData);
+      // Store in Supabase database
+      const { data, error } = await supabase
+        .from('weather_requests')
+        .insert([
+          {
+            user_id: user.id,
+            name: formData.name,
+            email: formData.email,
+            city: formData.city,
+            temperature: weather.temperature,
+            condition: weather.condition,
+            air_quality: weather.airQuality,
+            air_quality_index: weather.airQualityIndex
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error("Database error:", error);
+        throw new Error("Failed to save weather request to database");
+      }
+
+      console.log("Data stored to database:", data);
       
       // Simulate sending confirmation email
       console.log(`
@@ -104,7 +132,7 @@ const WeatherForm = () => {
       setIsSubmitted(true);
       toast({
         title: "Success!",
-        description: "Weather data retrieved and confirmation email sent.",
+        description: "Weather data retrieved and saved to your account.",
       });
       
     } catch (error) {
