@@ -1,1 +1,5 @@
-project_id = "lilvxmncvkoyhkgxlmfp"
+
+project_id = "default"
+
+[functions.send-weather-email]
+verify_jwt = true

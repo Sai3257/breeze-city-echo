@@ -109,31 +109,37 @@ const WeatherForm = () => {
 
       console.log("Data stored to database:", data);
       
-      // Simulate sending confirmation email
-      console.log(`
-        📧 CONFIRMATION EMAIL SENT TO: ${formData.email}
-        
-        Subject: Weather Update for ${formData.city}
-        
-        Hi ${formData.name},
-        
-        Here's your personalized weather summary for ${formData.city}:
-        
-        🌡️ Temperature: ${weather.temperature}°C
-        ☁️ Condition: ${weather.condition}
-        💨 Air Quality: ${weather.airQuality} (${weather.airQualityIndex})
-        
-        Thank you for using our Weather Automation System!
-        
-        Best regards,
-        Weather Team
-      `);
+      // Send real email using Supabase Edge Function
+      console.log("Sending confirmation email...");
+      const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-weather-email', {
+        body: {
+          name: formData.name,
+          email: formData.email,
+          city: formData.city,
+          temperature: weather.temperature,
+          condition: weather.condition,
+          airQuality: weather.airQuality,
+          airQualityIndex: weather.airQualityIndex
+        }
+      });
+
+      if (emailError) {
+        console.error("Email sending error:", emailError);
+        // Don't fail the entire operation if email fails
+        toast({
+          title: "Success with Warning",
+          description: "Weather data saved, but email sending failed. Please check your email settings.",
+          variant: "destructive"
+        });
+      } else if (emailResponse?.success) {
+        console.log("Email sent successfully:", emailResponse);
+        toast({
+          title: "Success!",
+          description: "Weather data retrieved and confirmation email sent!",
+        });
+      }
       
       setIsSubmitted(true);
-      toast({
-        title: "Success!",
-        description: "Weather data retrieved and saved to your account.",
-      });
       
     } catch (error) {
       console.error("Error processing form:", error);
