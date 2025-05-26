@@ -28,54 +28,70 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { name, email, city, temperature, condition, airQuality, airQualityIndex }: WeatherEmailRequest = await req.json();
 
-    console.log(`Sending weather email to ${email} for ${city}`);
+    console.log(`Attempting to send weather email to ${email} for ${city}`);
+    console.log(`Resend API Key configured: ${Deno.env.get("RESEND_API_KEY") ? "Yes" : "No"}`);
+
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      throw new Error("RESEND_API_KEY environment variable is not set");
+    }
 
     const emailResponse = await resend.emails.send({
       from: "Weather Automation <onboarding@resend.dev>",
       to: [email],
-      subject: `Weather Update for ${city}`,
+      subject: `🌤️ Weather Update for ${city}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb; text-align: center;">🌤️ Weather Update for ${city}</h1>
-          
-          <p style="font-size: 16px;">Hi ${name},</p>
-          
-          <p style="font-size: 16px;">Here's your personalized weather summary for <strong>${city}</strong>:</p>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <div style="display: grid; gap: 15px;">
-              <div style="background-color: white; padding: 15px; border-radius: 6px; text-align: center;">
-                <div style="font-size: 24px; font-weight: bold; color: #dc2626;">🌡️ ${temperature}°C</div>
-                <div style="color: #6b7280; font-size: 14px;">Temperature</div>
-              </div>
-              
-              <div style="background-color: white; padding: 15px; border-radius: 6px; text-align: center;">
-                <div style="font-size: 18px; font-weight: bold; color: #2563eb;">☁️ ${condition}</div>
-                <div style="color: #6b7280; font-size: 14px;">Condition</div>
-              </div>
-              
-              <div style="background-color: white; padding: 15px; border-radius: 6px; text-align: center;">
-                <div style="font-size: 18px; font-weight: bold; color: #059669;">💨 ${airQuality}</div>
-                <div style="color: #6b7280; font-size: 14px;">Air Quality (Index: ${airQualityIndex})</div>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+          <div style="background-color: white; border-radius: 10px; padding: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <h1 style="color: #2563eb; text-align: center; margin-bottom: 30px;">🌤️ Weather Update for ${city}</h1>
+            
+            <p style="font-size: 18px; color: #374151;">Hi ${name},</p>
+            
+            <p style="font-size: 16px; color: #6b7280; margin-bottom: 30px;">Here's your personalized weather summary for <strong style="color: #1f2937;">${city}</strong>:</p>
+            
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 10px; margin: 25px 0;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+                <div style="background-color: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; text-align: center;">
+                  <div style="font-size: 28px; font-weight: bold; color: #dc2626; margin-bottom: 5px;">🌡️ ${temperature}°C</div>
+                  <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Temperature</div>
+                </div>
+                
+                <div style="background-color: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; text-align: center;">
+                  <div style="font-size: 20px; font-weight: bold; color: #2563eb; margin-bottom: 5px;">☁️ ${condition}</div>
+                  <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Condition</div>
+                </div>
+                
+                <div style="background-color: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; text-align: center;">
+                  <div style="font-size: 18px; font-weight: bold; color: #059669; margin-bottom: 5px;">💨 ${airQuality}</div>
+                  <div style="color: #6b7280; font-size: 14px; font-weight: 500;">Air Quality (${airQualityIndex}/6)</div>
+                </div>
               </div>
             </div>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 25px 0;">
+              <h3 style="color: #374151; margin-top: 0;">📍 Location Details</h3>
+              <p style="color: #6b7280; margin: 10px 0;"><strong>City:</strong> ${city}</p>
+              <p style="color: #6b7280; margin: 10px 0;"><strong>Report Time:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <p style="font-size: 16px; color: #374151; text-align: center; margin: 30px 0;">Thank you for using our Weather Automation System! 🚀</p>
+            
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="font-size: 14px; color: #9ca3af; margin: 0;">
+                Best regards,<br>
+                <strong style="color: #374151;">Weather Automation Team</strong>
+              </p>
+            </div>
           </div>
-          
-          <p style="font-size: 16px;">Thank you for using our Weather Automation System!</p>
-          
-          <p style="font-size: 14px; color: #6b7280; text-align: center; margin-top: 30px;">
-            Best regards,<br>
-            Weather Automation Team
-          </p>
         </div>
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    console.log("✅ Email sent successfully:", emailResponse);
 
     return new Response(JSON.stringify({ 
       success: true, 
-      messageId: emailResponse.data?.id 
+      messageId: emailResponse.data?.id,
+      message: "Weather email sent successfully"
     }), {
       status: 200,
       headers: {
@@ -84,11 +100,18 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error in send-weather-email function:", error);
+    console.error("❌ Error in send-weather-email function:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error.message,
+        details: "Check the function logs for more information"
       }),
       {
         status: 500,

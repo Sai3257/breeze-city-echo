@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Cloud, Thermometer, Wind, Mail, MapPin, User } from "lucide-react";
+import { Loader2, Cloud, Thermometer, Wind, Mail, MapPin, User, AlertCircle } from "lucide-react";
 import { validateEmail } from "@/utils/validation";
 import { getWeatherData, WeatherData } from "@/utils/weatherApi";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +26,7 @@ const WeatherForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"pending" | "success" | "failed">("pending");
   const { toast } = useToast();
 
   const handleInputChange = (field: string, value: string) => {
@@ -77,15 +77,18 @@ const WeatherForm = () => {
     }
 
     setIsLoading(true);
+    setEmailStatus("pending");
     
     try {
-      console.log("Form submitted with data:", formData);
+      console.log("🚀 Form submitted with data:", formData);
       
-      // Get weather data
+      // Get weather data (now with better variation by city)
+      console.log("📡 Fetching weather data...");
       const weather = await getWeatherData(formData.city);
       setWeatherData(weather);
       
       // Store in Supabase database
+      console.log("💾 Saving to database...");
       const { data, error } = await supabase
         .from('weather_requests')
         .insert([
@@ -103,14 +106,14 @@ const WeatherForm = () => {
         .select();
 
       if (error) {
-        console.error("Database error:", error);
+        console.error("❌ Database error:", error);
         throw new Error("Failed to save weather request to database");
       }
 
-      console.log("Data stored to database:", data);
+      console.log("✅ Data stored to database:", data);
       
       // Send real email using Supabase Edge Function
-      console.log("Sending confirmation email...");
+      console.log("📧 Sending confirmation email...");
       const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-weather-email', {
         body: {
           name: formData.name,
@@ -124,25 +127,35 @@ const WeatherForm = () => {
       });
 
       if (emailError) {
-        console.error("Email sending error:", emailError);
-        // Don't fail the entire operation if email fails
+        console.error("❌ Email sending error:", emailError);
+        setEmailStatus("failed");
         toast({
-          title: "Success with Warning",
-          description: "Weather data saved, but email sending failed. Please check your email settings.",
+          title: "Partial Success",
+          description: "Weather data saved successfully, but email sending failed. Please check your email configuration.",
           variant: "destructive"
         });
       } else if (emailResponse?.success) {
-        console.log("Email sent successfully:", emailResponse);
+        console.log("✅ Email sent successfully:", emailResponse);
+        setEmailStatus("success");
         toast({
           title: "Success!",
-          description: "Weather data retrieved and confirmation email sent!",
+          description: "Weather data retrieved and confirmation email sent successfully!",
+        });
+      } else {
+        console.error("❌ Email sending failed:", emailResponse);
+        setEmailStatus("failed");
+        toast({
+          title: "Partial Success", 
+          description: "Weather data saved, but email sending encountered an issue.",
+          variant: "destructive"
         });
       }
       
       setIsSubmitted(true);
       
     } catch (error) {
-      console.error("Error processing form:", error);
+      console.error("❌ Error processing form:", error);
+      setEmailStatus("failed");
       toast({
         title: "Error",
         description: "Failed to process your request. Please try again.",
@@ -162,14 +175,23 @@ const WeatherForm = () => {
             Automation Complete!
           </CardTitle>
           <CardDescription className="text-base">
-            Your weather summary has been processed and emailed to you.
+            Your weather summary has been processed {emailStatus === "success" ? "and emailed to you" : "but email sending had issues"}.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {emailStatus === "failed" && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Weather data was saved successfully, but the email could not be sent. Please check your email configuration or try again later.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="bg-blue-50 p-6 rounded-lg space-y-4">
             <h3 className="font-semibold text-lg text-gray-900 flex items-center gap-2">
               <Cloud className="h-5 w-5 text-blue-600" />
-              Weather Summary for {formData.city}
+              Weather Summary for {weatherData.city}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -193,18 +215,21 @@ const WeatherForm = () => {
             </div>
           </div>
           
-          <Alert>
-            <Mail className="h-4 w-4" />
-            <AlertDescription>
-              A detailed weather summary has been sent to <strong>{formData.email}</strong>
-            </AlertDescription>
-          </Alert>
+          {emailStatus === "success" && (
+            <Alert>
+              <Mail className="h-4 w-4" />
+              <AlertDescription>
+                A detailed weather summary has been sent to <strong>{formData.email}</strong>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <Button 
             onClick={() => {
               setIsSubmitted(false);
               setWeatherData(null);
               setFormData({ name: "", email: "", city: "" });
+              setEmailStatus("pending");
             }}
             className="w-full"
             variant="outline"
