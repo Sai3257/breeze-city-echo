@@ -1,37 +1,90 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-interface WeatherVoiceBotProps {
-  weatherData: {
-    temperature: number;
-    condition: string;
-    airQuality: string;
-    city: string;
-  } | null;
-}
-
-const WeatherVoiceBot: React.FC<WeatherVoiceBotProps> = ({ weatherData }) => {
+const WeatherVoiceBot = ({ weatherData }: { weatherData: any }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [recognition, setRecognition] = useState<any>(null);
   const { toast } = useToast();
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    // Check if speech recognition is supported
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+
+      recognitionInstance.onstart = () => {
+        setIsListening(true);
+        console.log('Voice recognition started');
+      };
+
+      recognitionInstance.onresult = (event: any) => {
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript;
+        setTranscript(transcript);
+        console.log('Recognized speech:', transcript);
+        
+        // Process the voice command
+        handleVoiceCommand(transcript.toLowerCase());
+      };
+
+      recognitionInstance.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        toast({
+          title: "Voice Recognition Error",
+          description: "Could not recognize speech. Please try again.",
+          variant: "destructive"
+        });
+      };
+
+      recognitionInstance.onend = () => {
+        setIsListening(false);
+        console.log('Voice recognition ended');
+      };
+
+      setRecognition(recognitionInstance);
+    } else {
+      toast({
+        title: "Not Supported",
+        description: "Speech recognition is not supported in this browser.",
+        variant: "destructive"
+      });
+    }
+  }, []);
+
+  const handleVoiceCommand = (command: string) => {
+    if (command.includes('weather') || command.includes('temperature') || command.includes('report')) {
+      speakWeatherReport();
+    } else if (command.includes('hello') || command.includes('hi')) {
+      speak("Hello! I'm your weather assistant. Ask me about the weather!");
+    } else {
+      speak("I can help you with weather information. Try saying 'tell me the weather' or 'weather report'.");
+    }
+  };
 
   const speakWeatherReport = () => {
     if (!weatherData) {
-      speak("No weather data available. Please submit a weather request first.");
+      speak("No weather data available. Please check a city's weather first.");
       return;
     }
 
-    const report = `Current weather report for ${weatherData.city}: 
-      The temperature is ${weatherData.temperature} degrees Celsius. 
-      Weather condition is ${weatherData.condition}. 
-      Air quality is ${weatherData.airQuality}. 
-      Have a great day!`;
-    
+    const report = `Current weather for ${weatherData.location}: 
+    Temperature is ${weatherData.temperature}°C, 
+    feels like ${weatherData.feelsLike}°C. 
+    Humidity is ${weatherData.humidity}%. 
+    Weather condition: ${weatherData.condition}. 
+    Air quality index is ${weatherData.airQuality}.`;
+
     speak(report);
   };
 
@@ -41,7 +94,7 @@ const WeatherVoiceBot: React.FC<WeatherVoiceBotProps> = ({ weatherData }) => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.8;
       utterance.pitch = 1;
-      utterance.volume = 0.8;
+      utterance.volume = 1;
       
       utterance.onend = () => {
         setIsSpeaking(false);
@@ -51,7 +104,7 @@ const WeatherVoiceBot: React.FC<WeatherVoiceBotProps> = ({ weatherData }) => {
         setIsSpeaking(false);
         toast({
           title: "Speech Error",
-          description: "Unable to speak the weather report.",
+          description: "Could not speak the text. Please try again.",
           variant: "destructive"
         });
       };
@@ -60,64 +113,22 @@ const WeatherVoiceBot: React.FC<WeatherVoiceBotProps> = ({ weatherData }) => {
     } else {
       toast({
         title: "Not Supported",
-        description: "Speech synthesis is not supported in your browser.",
+        description: "Text-to-speech is not supported in this browser.",
         variant: "destructive"
       });
     }
   };
 
   const startListening = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.toLowerCase();
-        
-        if (transcript.includes('weather') || transcript.includes('report') || transcript.includes('temperature')) {
-          speakWeatherReport();
-        } else {
-          speak("I can help you with weather reports. Try saying 'weather report' or 'tell me the weather'.");
-        }
-      };
-
-      recognition.onerror = (event) => {
-        setIsListening(false);
-        toast({
-          title: "Speech Recognition Error",
-          description: "Unable to recognize speech. Please try again.",
-          variant: "destructive"
-        });
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
+    if (recognition) {
       recognition.start();
-    } else {
-      toast({
-        title: "Not Supported",
-        description: "Speech recognition is not supported in your browser.",
-        variant: "destructive"
-      });
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (recognition) {
+      recognition.stop();
     }
-    setIsListening(false);
   };
 
   const stopSpeaking = () => {
@@ -128,55 +139,69 @@ const WeatherVoiceBot: React.FC<WeatherVoiceBotProps> = ({ weatherData }) => {
   };
 
   return (
-    <Card className="mt-6 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+    <Card className="mt-6">
       <CardHeader>
-        <CardTitle className="text-lg text-blue-800 flex items-center gap-2">
-          🤖 AI Weather Voice Assistant
+        <CardTitle className="flex items-center gap-2">
+          <Volume2 className="h-5 w-5" />
+          AI Voice Assistant
         </CardTitle>
+        <CardDescription>
+          Click the microphone to ask about weather or get a voice report
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Ask me about the weather or click "Speak Weather" to hear the current report!
-        </p>
-        
-        <div className="flex gap-3 justify-center">
+        <div className="flex gap-2">
           <Button
             onClick={isListening ? stopListening : startListening}
-            variant={isListening ? "destructive" : "outline"}
+            disabled={isSpeaking}
+            variant={isListening ? "destructive" : "default"}
             className="flex items-center gap-2"
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            {isListening ? "Stop Listening" : "Start Listening"}
+            {isListening ? (
+              <>
+                <MicOff className="h-4 w-4" />
+                Stop Listening
+              </>
+            ) : (
+              <>
+                <Mic className="h-4 w-4" />
+                Start Listening
+              </>
+            )}
           </Button>
 
           <Button
-            onClick={isSpeaking ? stopSpeaking : speakWeatherReport}
-            variant={isSpeaking ? "destructive" : "default"}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-            disabled={!weatherData && !isSpeaking}
+            onClick={speakWeatherReport}
+            disabled={isListening || !weatherData}
+            variant="outline"
+            className="flex items-center gap-2"
           >
-            {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            {isSpeaking ? "Stop Speaking" : "Speak Weather"}
+            <Volume2 className="h-4 w-4" />
+            Speak Weather
           </Button>
+
+          {isSpeaking && (
+            <Button
+              onClick={stopSpeaking}
+              variant="destructive"
+              className="flex items-center gap-2"
+            >
+              <VolumeX className="h-4 w-4" />
+              Stop Speaking
+            </Button>
+          )}
         </div>
 
-        {isListening && (
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-blue-600">
-              <div className="animate-pulse h-2 w-2 bg-blue-600 rounded-full"></div>
-              <span className="text-sm">Listening for voice commands...</span>
-            </div>
+        {transcript && (
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">You said:</p>
+            <p className="font-medium">{transcript}</p>
           </div>
         )}
 
-        {isSpeaking && (
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-green-600">
-              <div className="animate-bounce h-2 w-2 bg-green-600 rounded-full"></div>
-              <span className="text-sm">Speaking weather report...</span>
-            </div>
-          </div>
-        )}
+        <div className="text-xs text-gray-500">
+          Try saying: "Tell me the weather", "Weather report", or "Hello"
+        </div>
       </CardContent>
     </Card>
   );
