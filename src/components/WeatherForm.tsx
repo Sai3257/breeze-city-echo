@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { getWeatherData, WeatherData } from "@/utils/weatherApi";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import WeatherVoiceBot from "./WeatherVoiceBot";
 
 const WeatherForm = () => {
   const { user } = useAuth();
@@ -168,76 +170,80 @@ const WeatherForm = () => {
 
   if (isSubmitted && weatherData) {
     return (
-      <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="text-center pb-6">
-          <CardTitle className="text-2xl text-green-700 flex items-center justify-center gap-2">
-            <Mail className="h-6 w-6" />
-            Automation Complete!
-          </CardTitle>
-          <CardDescription className="text-base">
-            Your weather summary has been processed {emailStatus === "success" ? "and emailed to you" : "but email sending had issues"}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {emailStatus === "failed" && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Weather data was saved successfully, but the email could not be sent. Please check your email configuration or try again later.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <div className="bg-blue-50 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold text-lg text-gray-900 flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-blue-600" />
-              Weather Summary for {weatherData.city}
-            </h3>
+      <div className="space-y-6">
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6">
+            <CardTitle className="text-2xl text-green-700 flex items-center justify-center gap-2">
+              <Mail className="h-6 w-6" />
+              Automation Complete!
+            </CardTitle>
+            <CardDescription className="text-base">
+              Your weather summary has been processed {emailStatus === "success" ? "and emailed to you" : "but email sending had issues"}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {emailStatus === "failed" && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Weather data was saved successfully, but the email could not be sent. Please check your email configuration or try again later.
+                </AlertDescription>
+              </Alert>
+            )}
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-4 rounded-lg text-center">
-                <Thermometer className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">{weatherData.temperature}°C</div>
-                <div className="text-sm text-gray-600">Temperature</div>
-              </div>
+            <div className="bg-blue-50 p-6 rounded-lg space-y-4">
+              <h3 className="font-semibold text-lg text-gray-900 flex items-center gap-2">
+                <Cloud className="h-5 w-5 text-blue-600" />
+                Weather Summary for {weatherData.city}
+              </h3>
               
-              <div className="bg-white p-4 rounded-lg text-center">
-                <Cloud className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                <div className="text-lg font-semibold text-gray-900">{weatherData.condition}</div>
-                <div className="text-sm text-gray-600">Condition</div>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg text-center">
-                <Wind className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <div className="text-lg font-semibold text-gray-900">{weatherData.airQuality}</div>
-                <div className="text-sm text-gray-600">Air Quality</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-lg text-center">
+                  <Thermometer className="h-8 w-8 text-orange-500 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-gray-900">{weatherData.temperature}°C</div>
+                  <div className="text-sm text-gray-600">Temperature</div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg text-center">
+                  <Cloud className="h-8 w-8 text-blue-500 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-gray-900">{weatherData.condition}</div>
+                  <div className="text-sm text-gray-600">Condition</div>
+                </div>
+                
+                <div className="bg-white p-4 rounded-lg text-center">
+                  <Wind className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                  <div className="text-lg font-semibold text-gray-900">{weatherData.airQuality}</div>
+                  <div className="text-sm text-gray-600">Air Quality</div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {emailStatus === "success" && (
-            <Alert>
-              <Mail className="h-4 w-4" />
-              <AlertDescription>
-                A detailed weather summary has been sent to <strong>{formData.email}</strong>
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <Button 
-            onClick={() => {
-              setIsSubmitted(false);
-              setWeatherData(null);
-              setFormData({ name: "", email: "", city: "" });
-              setEmailStatus("pending");
-            }}
-            className="w-full"
-            variant="outline"
-          >
-            Submit Another Request
-          </Button>
-        </CardContent>
-      </Card>
+            
+            {emailStatus === "success" && (
+              <Alert>
+                <Mail className="h-4 w-4" />
+                <AlertDescription>
+                  A detailed weather summary has been sent to <strong>{formData.email}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <Button 
+              onClick={() => {
+                setIsSubmitted(false);
+                setWeatherData(null);
+                setFormData({ name: "", email: "", city: "" });
+                setEmailStatus("pending");
+              }}
+              className="w-full"
+              variant="outline"
+            >
+              Submit Another Request
+            </Button>
+          </CardContent>
+        </Card>
+
+        <WeatherVoiceBot weatherData={weatherData} />
+      </div>
     );
   }
 

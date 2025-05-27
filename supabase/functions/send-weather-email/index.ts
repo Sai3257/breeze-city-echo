@@ -19,6 +19,21 @@ interface WeatherEmailRequest {
   airQualityIndex: number;
 }
 
+const formatToIST = () => {
+  const now = new Date();
+  const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)); // Add 5:30 hours for IST
+  
+  return istTime.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -34,6 +49,8 @@ const handler = async (req: Request): Promise<Response> => {
     if (!Deno.env.get("RESEND_API_KEY")) {
       throw new Error("RESEND_API_KEY environment variable is not set");
     }
+
+    const istTime = formatToIST();
 
     const emailResponse = await resend.emails.send({
       from: "Weather Automation <onboarding@resend.dev>",
@@ -70,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 25px 0;">
               <h3 style="color: #374151; margin-top: 0;">📍 Location Details</h3>
               <p style="color: #6b7280; margin: 10px 0;"><strong>City:</strong> ${city}</p>
-              <p style="color: #6b7280; margin: 10px 0;"><strong>Report Time:</strong> ${new Date().toLocaleString()}</p>
+              <p style="color: #6b7280; margin: 10px 0;"><strong>Report Time (IST):</strong> ${istTime}</p>
             </div>
             
             <p style="font-size: 16px; color: #374151; text-align: center; margin: 30px 0;">Thank you for using our Weather Automation System! 🚀</p>

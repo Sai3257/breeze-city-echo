@@ -7,13 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Cloud, LogIn, UserPlus } from 'lucide-react';
+import { Loader2, Cloud, LogIn, UserPlus, Mail } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -29,6 +31,9 @@ const Auth = () => {
     password: '',
     confirmPassword: ''
   });
+
+  const [resetEmail, setResetEmail] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -96,6 +101,120 @@ const Auth = () => {
     
     setIsLoading(false);
   };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      setResetSent(true);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Please check your email for password reset instructions.",
+      });
+    }
+
+    setIsLoading(false);
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Cloud className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900">Weather Automation</h1>
+            </div>
+            <p className="text-gray-600">Reset your password</p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Forgot Password
+              </CardTitle>
+              <CardDescription>
+                Enter your email address and we'll send you a link to reset your password
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {resetSent ? (
+                <div className="text-center space-y-4">
+                  <Alert>
+                    <Mail className="h-4 w-4" />
+                    <AlertDescription>
+                      A password reset link has been sent to {resetEmail}
+                    </AlertDescription>
+                  </Alert>
+                  <Button 
+                    onClick={() => setShowForgotPassword(false)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Back to Login
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Reset Link'
+                    )}
+                  </Button>
+
+                  <Button 
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Back to Login
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -167,6 +286,17 @@ const Auth = () => {
                       'Sign In'
                     )}
                   </Button>
+
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      Forgot your password?
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
