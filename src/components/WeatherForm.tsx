@@ -9,12 +9,10 @@ import { Loader2, Cloud, Thermometer, Wind, Mail, MapPin, User, AlertCircle } fr
 import { validateEmail } from "@/utils/validation";
 import { getWeatherData, WeatherData } from "@/utils/weatherApi";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import WeatherVoiceBot from "./WeatherVoiceBot";
 
 const WeatherForm = () => {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -69,33 +67,23 @@ const WeatherForm = () => {
       return;
     }
 
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please sign in to submit a weather request.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsLoading(true);
     setEmailStatus("pending");
     
     try {
       console.log("🚀 Form submitted with data:", formData);
       
-      // Get weather data (now with better variation by city)
+      // Get weather data
       console.log("📡 Fetching weather data...");
       const weather = await getWeatherData(formData.city);
       setWeatherData(weather);
       
-      // Store in Supabase database
+      // Store in Supabase database without user authentication
       console.log("💾 Saving to database...");
       const { data, error } = await supabase
         .from('weather_requests')
         .insert([
           {
-            user_id: user.id,
             name: formData.name,
             email: formData.email,
             city: formData.city,
@@ -114,7 +102,7 @@ const WeatherForm = () => {
 
       console.log("✅ Data stored to database:", data);
       
-      // Send real email using Supabase Edge Function
+      // Send email using Supabase Edge Function
       console.log("📧 Sending confirmation email...");
       const { data: emailResponse, error: emailError } = await supabase.functions.invoke('send-weather-email', {
         body: {
