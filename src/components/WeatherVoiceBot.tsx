@@ -4,8 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { WeatherData } from '@/utils/weatherApi';
 
-const WeatherVoiceBot = ({ weatherData }: { weatherData: any }) => {
+interface WeatherVoiceBotProps {
+  weatherData: WeatherData;
+}
+
+const WeatherVoiceBot = ({ weatherData }: WeatherVoiceBotProps) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -78,12 +83,10 @@ const WeatherVoiceBot = ({ weatherData }: { weatherData: any }) => {
       return;
     }
 
-    const report = `Current weather for ${weatherData.location}: 
-    Temperature is ${weatherData.temperature}°C, 
-    feels like ${weatherData.feelsLike}°C. 
-    Humidity is ${weatherData.humidity}%. 
+    const report = `Current weather for ${weatherData.city}: 
+    Temperature is ${weatherData.temperature} degrees Celsius. 
     Weather condition: ${weatherData.condition}. 
-    Air quality index is ${weatherData.airQuality}.`;
+    Air quality is ${weatherData.airQuality} with an index of ${weatherData.airQualityIndex}.`;
 
     speak(report);
   };

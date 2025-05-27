@@ -45,7 +45,6 @@ export type Database = {
           name: string
           temperature: number | null
           updated_at: string
-          user_id: string | null
         }
         Insert: {
           air_quality?: string | null
@@ -58,7 +57,6 @@ export type Database = {
           name: string
           temperature?: number | null
           updated_at?: string
-          user_id?: string | null
         }
         Update: {
           air_quality?: string | null
@@ -71,7 +69,6 @@ export type Database = {
           name?: string
           temperature?: number | null
           updated_at?: string
-          user_id?: string | null
         }
         Relationships: []
       }
