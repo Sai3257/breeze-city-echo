@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { getWeatherData, WeatherData } from "@/utils/weatherApi";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import WeatherVoiceBot from "./WeatherVoiceBot";
+import N8nIntegration from "./N8nIntegration";
 
 const WeatherForm = () => {
   const [formData, setFormData] = useState({
@@ -231,6 +231,7 @@ const WeatherForm = () => {
         </Card>
 
         <WeatherVoiceBot weatherData={weatherData} />
+        <N8nIntegration weatherData={weatherData} />
       </div>
     );
   }
